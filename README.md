@@ -3,13 +3,13 @@
 
 **Author:** Joseph Goydish II
 **Date:** January 10, 2026  
-**Device Tested:** iPhone 14 Pro Max (iOS 26.2 build 23C55)  
-**Scope:** All APFS iPhones 7+ (iOS 10.3+)
+**Device Tested in report:** iPhone 14 Pro Max (iOS 26.2 build 23C55)  
+**Scope:** All tested APFS iPhones (12, 14, 15) and architecturally implied for iPhone 7+
 
 ***
 
 ## EXECUTIVE SUMMARY
-DFU restore does NOT perform full NAND erasure. Instead, Secure Enclave and NAND controllers selectively preserve `/dev/disk1s8` (`/private/var/mobile`) containing pre-restore daemon logs (11:45:41), user privacy permissions (Health/Photos), and 4 background processes spanning DFU boundary.
+DFU restore reflashes the entire OS and firmware stack, but does not guarantee full physical NAND block erasure due to SEP-mediated protected volumes. Instead, Secure Enclave and NAND controllers selectively preserve `/dev/disk1s8` (`/private/var/mobile`) containing pre-restore daemon logs, user privacy permissions (Health/Photos), and 4 background processes spanning DFU boundary.
 
 
 **AppleANS3CGv2Controller and Secure Enclave** threads active 4s post-completion, executed block-level protection during restore. 6/9 APFS volumes survive - including user data volume disk1s8 that should not - via silicon-enforced protection.
