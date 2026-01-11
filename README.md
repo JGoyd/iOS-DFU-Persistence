@@ -9,41 +9,75 @@
 ***
 
 ## EXECUTIVE SUMMARY
-DFU restore reflashes the entire OS and firmware stack, but does not guarantee full physical NAND block erasure due to SEP-mediated protected volumes. Instead, Secure Enclave and NAND controllers selectively preserve `/dev/disk1s8` (`/private/var/mobile`) containing pre-restore daemon logs, user privacy permissions (Health/Photos), and 4 background processes spanning DFU boundary.
+DFU restore reflashes the entire OS and firmware stack, but does not guarantee full physical NAND block erasure due to SEP-mediated protected volumes. Instead, Secure Enclave and NAND controllers selectively preserve `/dev/disk1s8` (`/private/var/mobile`) containing pre-restore certificate signing, daemon logs, user privacy permissions (Health/Photos), and 4 background processes spanning DFU boundary.
 
 
 **AppleANS3CGv2Controller and Secure Enclave** threads active 4s post-completion, executed block-level protection during restore. 6/9 APFS volumes survive - including user data volume disk1s8 that should not - via silicon-enforced protection.
 
-***
 
 ### THREAT MODEL
 This finding impacts forensic sanitization, resale, device repurposing, and high-assurance data destruction scenarios, not typical consumer resets.
 
 
 #### IMPACT STATEMENT
-> DFU restore cannot be relied upon for complete data erasure. Privacy consents (Health/Photos), daemon logs (11:45), and background processes persist via silicon-enforced volume protection across APFS tested iPhones. Architectually plausible for iPhones 7+ (iOS 10.3+).
+> DFU restore cannot be relied upon for complete data erasure. device provisioning, privacy consents (Health/Photos), daemon logs, and background processes persist via silicon-enforced volume protection across APFS tested iPhones. Architectually plausible for iPhones 7+ (iOS 10.3+).
 
-***
+---
 
 ## **KEY FINDINGS**
-
-**Reproduced on iPhone 14 Pro Max (A16, 23C55).**
-
-### 1. **Timestamp Collision - Daemon Log Persistence**
+### **Capture Metadata**
 ```
 DFU RESTORE COMPLETE: 2026-01-09 14:48:25 EST
 SYSdiagnose **TRIGGERED**: 14:48:25 EST *(0-1.5s post-DFU)*
-FILENAME PROOF:        sysdiagnose_2026.01.09_14-48-25-0500_iPhone_23C55.tar.gz 
+FILENAME PROOF:        sysdiagnose_2026.01.09_14-48-25-0500_iPhone-OS_iPhone_23C55.tar.gz 
 Internal capture:      14:48:28 EST (3s collection)
+
+```
+***
+### 1. **Certificate Signing Across DFU Boundary**
+```
+DFU RESTORE COMPLETE: 2026-01-09 14:48:00 EST
+Certificate ISSUED:    19:39:11 UTC (14:39:11 EST) ← 8m 49s PRE-DFU
+Certificate DELIVERED: 19:49:08 UTC (14:49:08 EST) ← 1m 08s POST-DFU
+```
+```
+0000000000000005.tracev3 (mobileactivationd):
+PRE-DFU:
+"14:39:11 EST - DCRT certificate issued"
+"Serial: 01:9B:A4:4E:45:FA | Valid: 2026-01-09 to 2026-01-16"
+"Embedded: IMEI 357397708671168, MAC 18:fa:b7:82:67:XX, UDID 00008120-..."
+```
+```
+POST-DFU:
+"14:49:02 EST - IN_FLIGHT activation task initiated"
+"14:49:08 EST - d.DCRT.OOB:6BA35E ← Certificate delivery via albert.apple.com"
+"14:49:10 EST - Keybag sync: Expires 2026-01-09T20:19:08Z"
+"14:49:15 EST - .SDCRT.OOB:6AF177 ← Secure DCRT confirmation"
+```
+> **Gap: Certificate pre-generated 9m 57s before delivery (19:39:11 → 19:49:08)**
+
+**Network Evidence:**
+```
+NSURLSession task: DFB99E52-E4A4-4170-B457-09342CC1323F
+Source: albert.apple.com/device | Response: HTTP 200 
 ```
 
+**keybagd correlation**
+```
+stacks-2026-01-09-144824.ips:
+keybagd PID 55 last run: 14:47:24 EST (DURING restore)
+Certificate storage:     14:49:10 EST (POST-DFU)
+```
+---
+
+### 2. **Daemon Log Persistence**
 ```
 mobileactivationd_log.1 (disk1s8):
 "Fri Jan 9 11:45:41 2026 [198] MA: main: ____________________ Mobile Activation Startup"
 "build_version: 23C55" ← IDENTICAL restored firmware
 ```
 
- **Gap: 14:48:25 - 11:45:41 = 3hr 2m 44s pre-restoration**
+> **Gap: 14:48:25 - 11:45:41 = 3hr 2m 44s pre-restoration**
 
 
 **Additional pre-DFU logs:**
@@ -52,8 +86,9 @@ MSUEarlyBootTask.log:          11:45:22 EST
 mobile_installation_log.0:     11:45:43 EST
 ```
 
+---
 
-### 2. **Privacy Permissions Survive DFU (TCC.db)**
+### 3. **Privacy Permissions Survive DFU (TCC.db)**
 ```
 /private/var/mobile/Library/TCC.db (disk1s8) - Captured 14:48:25 EST:
 
@@ -71,7 +106,7 @@ kTCCServiceUbiquity (iCLOUD SYNC):
 
 ---
 
-### 3. **Background Processes Span DFU Boundary (BGSQL)**
+### 4. **Background Processes Span DFU Boundary (BGSQL)**
 ```
 DFU BOUNDARY: 14:48:25 EST (19:48:25 GMT)
 PROCESSES MAINTAINING STATE CONTINUITY:
@@ -83,8 +118,9 @@ PROCESSES MAINTAINING STATE CONTINUITY:
 | **linkd**               | 14:46:36   | **14:48:00**| ✅ YES      | **iCloud/messaging metadata** |
 | **generativeexperiencesd**|14:46:26 | 14:47:28   | ⚠️ Partial  | AI/generative services     |
 ```
+---
 
-### 4. **Protected Volume Hierarchy (mount.txt)**
+### 5. **Protected Volume Hierarchy (mount.txt)**
 ```
 **PRESERVED (6/9 volumes survive DFU):**
 /dev/disk1s2  → /private/var                    **(protect)**
@@ -98,10 +134,10 @@ PROCESSES MAINTAINING STATE CONTINUITY:
 • UUID: `61706673-7575-6964-0002-766F6C756D07`
 • Role: **"Volume User"**
 • Mount: `apfs, local, nodev, nosuid, journaled, noatime, **protect**`
-
 ```
+---
 
-### 5. **Hardware Controllers Executed Protection**
+### 6. **Hardware Controllers Executed Protection**
 ```
 stacks-2026-01-09-144824.ips **(14:48:24 = 4s post-DFU):**
 ├── **AppleANS3CGv2Controller (x2)** ← **NAND controller firmware**
@@ -116,8 +152,9 @@ stacks-2026-01-09-144824.ips **(14:48:24 = 4s post-DFU):**
 4. Restore ends → Controllers remain active 
 5. disk1s8 intact → **11:45 logs + 14:47 TCC.db survive**
 ```
+---
 
-### 6. **Restore Firmware Preserves Protected State**
+### 7. **Restore Firmware Preserves Protected State**
 ```
 restore_perform.txt **checkpoints:**
 [0x0661] **read_persistent_files**           ← **Pre-erase**
@@ -158,7 +195,7 @@ Restore Ramdisk ──────→ **"Erase all NAND blocks"**
 
 ## **PRESERVED DATA INVENTORY** (disk1s8)
 ```
-├── **Library/Logs/mobileactivationd_log.1**     `[11:45:41 PROOF]`
+├── **Library/Logs/mobileactivationdlog.1**      `[11:45:41 PROOF]`
 ├── **Library/TCC.db**                           `[Health/Photos @ 14:47]`
 ├── **Library/Logs/MSUEarlyBootTask.log**        `[11:45:22]`
 ├── **BGSQL traces**                             `[4 processes cross DFU]`
@@ -197,7 +234,9 @@ Restore Ramdisk ──────→ **"Erase all NAND blocks"**
 ├── `TCC.db`                                [14:47 privacy grants]
 ├── `mobileactivationd_log.1`               **[11:45:41 killshot]**
 ├── `restore_perform.txt`                   [0x0661→0x0F00 checkpoints]
-└── `bgsql traces`                          [Cross-DFU processes]
+├── `bgsql traces`                          [Cross-DFU processes]
+└── `0000000000000005.tracev3`              [Certificate Auto-Sign]
+
 ```
 
 *Full sysdiagnose available upon request*
