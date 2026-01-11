@@ -20,7 +20,7 @@
 `mount.txt: apfs...journaled,noatime,**protect**` [EVIDENCE/mount.txt]
 
 **2. 11:45 pre-DFU logs survive restore**  
-`mobileactivationd_log.1: "Fri Jan 9 11:45:41 2026"` [EVIDENCE/mobileactivationdlog.1]
+`mobileactivationdlog.1: "Fri Jan 9 11:45:41 2026"` [EVIDENCE/mobileactivationdlog.1]
 
 **3. TCC.db privacy grants preserved**  
 `Health/Photos auth_value=2 (ALLOWED) 14:47:24` [EVIDENCE/TCC.db]
