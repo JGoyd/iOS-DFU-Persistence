@@ -21,7 +21,7 @@ This finding impacts forensic sanitization, resale, device repurposing, and high
 
 
 #### IMPACT STATEMENT
-> DFU restore cannot be relied upon for complete data erasure. Privacy consents (Health/Photos), daemon logs (11:45), and background processes persist via silicon-enforced volume protection across all APFS iPhones 7+ (iOS 10.3+).
+> DFU restore cannot be relied upon for complete data erasure. Privacy consents (Health/Photos), daemon logs (11:45), and background processes persist via silicon-enforced volume protection across APFS tested iPhones. Architectually plausible for iPhones 7+ (iOS 10.3+).
 
 ***
 
