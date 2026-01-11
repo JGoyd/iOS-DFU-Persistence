@@ -113,7 +113,7 @@ stacks-2026-01-09-144824.ips **(14:48:24 = 4s post-DFU):**
 1. DFU → Controllers receive "erase NAND"
 2. **AppleANS3CGv2Controller** queries SEP effaceable storage
 3. SEP → disk1s8 **PROTECTED** → Blocks skipped
-4. Restore ends → Controllers remain active (**your capture**)
+4. Restore ends → Controllers remain active 
 5. disk1s8 intact → **11:45 logs + 14:47 TCC.db survive**
 ```
 
