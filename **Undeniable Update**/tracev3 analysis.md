@@ -1,4 +1,4 @@
-# Silicon-Enforced DFU Persistence
+# Stepped-On-Silicon Enforced DFU Persistence
 
 **Subject:** Addendum to the iOS DFU Restore Hardware Persistence Disclosure
 
