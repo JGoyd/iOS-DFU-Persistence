@@ -17,14 +17,7 @@ Three-tier certificate chain maintains post-DFU persistence: SEP Root CA (hardwa
 
 ---
 
-## EVIDENCE VERIFICATION
-
-**Primary Evidence Package:**
-```
-File:     sysdiagnose_2026.01.09_14-48-25-0500_iPhone-OS_iPhone_23C55.tar.gz
-Captured: 2026-01-09 14:48:25 EST (0-3 seconds post-DFU completion)
-SHA-256:  4d9bb243f983ce7f6ec77f7bd95fd2b3cb797133777d770625b12e1cff5eec3d
-```
+## EVIDENCE 
 
 **Public Download for Independent Verification:**
 ```
